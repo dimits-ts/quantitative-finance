@@ -1,4 +1,6 @@
 import pandas as pd
+import os
+import sys
 
 
 class CurrencyTrade:
@@ -121,9 +123,35 @@ def filter_successful_arbitrages(currency_trades: list[CurrencyTrade]) -> list[C
     return [trade for trade in currency_trades if trade.arbitrage_rate > 1]
 
 
-DATA_PATH = "data/Quotation Matrix.xlsx"
+def main():
+    if len(sys.argv) != 3:
+        print("Usage: python script.py <data_path> <starting_currency>")
+        print("Example: python script.py 'data/Quotation Matrix.xlsx' 'USD'")
+        sys.exit(1)
 
-quot_mat = pd.read_excel(DATA_PATH, index_col=0)
-triangular_trades = check_all_triangular("USD", quot_mat)
-print("Arbitrage trades:")
-print("\n".join([str(trade) for trade in filter_successful_arbitrages(triangular_trades)]))
+    data_path = sys.argv[1]
+    starting_currency = sys.argv[2]
+
+    if not os.path.exists(data_path):
+        print(f"Error: The file '{data_path}' does not exist.")
+        sys.exit(1)
+
+    try:
+        quot_mat = pd.read_excel(data_path, index_col=0)
+    except Exception as e:
+        print(f"Error: Unable to read the file '{data_path}'.")
+        print(f"Exception: {e}")
+        sys.exit(1)
+
+    if starting_currency not in quot_mat.index:
+        print(f"Error: The starting currency '{starting_currency}' is not in the quotation matrix.")
+        sys.exit(1)
+
+    triangular_trades = check_all_triangular(starting_currency, quot_mat)
+    successful_trades = filter_successful_arbitrages(triangular_trades)
+    print("Arbitrage trades:")
+    print("\n".join([str(trade) for trade in successful_trades]))
+
+
+if __name__ == "__main__":
+    main()
