@@ -8,6 +8,7 @@ from fx_trades import exchange_rate, CurrencyTrade, trade_list_to_str
 class TriangularTrade(CurrencyTrade):
     def __init__(self, starting_currency: str, intermediate_currency: str, end_currency: str, arbitrage_rate: float):
         super().__init__(starting_currency, intermediate_currency, end_currency, arbitrage_rate)
+
     def is_successful(self):
         return self.arbitrage_rate > 1
 

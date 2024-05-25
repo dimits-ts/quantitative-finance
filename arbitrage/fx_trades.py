@@ -61,4 +61,7 @@ def trade_list_to_str(trades: list[CurrencyTrade]) -> str:
     :param trades: a list of currency trades
     :return: a string representation of the currency trades
     """
-    return "\n".join([str(trade) for trade in trades])
+    if len(trades) == 0:
+        return "No trades found"
+    else:
+        return "\n".join([str(trade) for trade in trades])
