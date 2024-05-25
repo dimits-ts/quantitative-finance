@@ -5,6 +5,25 @@ import sys
 from fx_trades import exchange_rate, CurrencyTrade, trade_list_to_str
 
 
+class OnewayTrade(CurrencyTrade):
+    def __init__(self, starting_currency: str,
+                 intermediate_currency: str,
+                 end_currency: str,
+                 arbitrage_rate: float,
+                 quot_matrix: pd.DataFrame):
+        self.quot_matrix = quot_matrix
+        super().__init__(starting_currency, intermediate_currency, end_currency, arbitrage_rate)
+
+    def is_successful(self):
+        return self.arbitrage_rate > exchange_rate(self.quot_matrix,
+                                                   from_currency=self.starting_currency,
+                                                   to_currency=self.end_currency)
+
+    def __str__(self):
+        return f"{self.starting_currency}->{self.intermediate_currency}->{self.end_currency}" \
+               f": {self.arbitrage_rate:.4f}"
+
+
 def one_way_trade(starting_currency: str, intermediate_currency: str, end_currency: str,
                   quot_matrix: pd.DataFrame) -> float:
     """
@@ -50,30 +69,15 @@ def check_all_one_ways(starting_currency: str, end_currency: str, quot_matrix: p
                                          end_currency=end_currency,
                                          quot_matrix=quot_matrix)
 
-            res = CurrencyTrade(starting_currency=starting_currency,
-                                intermediate_currency=intermediate_currency,
-                                end_currency=end_currency,
-                                arbitrage_rate=one_way_rate)
+            res = OnewayTrade(starting_currency=starting_currency,
+                              intermediate_currency=intermediate_currency,
+                              end_currency=end_currency,
+                              arbitrage_rate=one_way_rate,
+                              quot_matrix=quot_matrix)
 
             trades.append(res)
 
     return trades
-
-
-def filter_successful_one_ways(currency_trades: list[CurrencyTrade], quot_matrix: pd.DataFrame) -> list[CurrencyTrade]:
-    """
-    Filter the list of currency trades to find successful one-way arbitrages.
-
-    :param quot_matrix: The quotation matrix
-    :param currency_trades: A list of CurrencyTrade instances.
-    :type currency_trades: list[CurrencyTrade]
-    :return: A list of CurrencyTrade instances with an arbitrage rate greater than 1.
-    :rtype: list[CurrencyTrade]
-    """
-    return [trade for trade in currency_trades
-            if trade.arbitrage_rate > exchange_rate(quot_matrix,
-                                                    from_currency=trade.starting_currency,
-                                                    to_currency=trade.end_currency)]
 
 
 def main():
@@ -101,13 +105,13 @@ def main():
         print(f"Error: The currency pair '{starting_currency}' to '{end_currency}' is not in the quotation matrix.")
         sys.exit(1)
 
-    arbitrage_trades = check_all_one_ways(starting_currency=starting_currency,
-                                          end_currency=end_currency,
-                                          quot_matrix=quot_mat)
+    one_way_trades = check_all_one_ways(starting_currency=starting_currency,
+                                        end_currency=end_currency,
+                                        quot_matrix=quot_mat)
     print("All one-way arbitrage trades:")
-    print(trade_list_to_str(arbitrage_trades))
+    print(trade_list_to_str(one_way_trades))
 
-    successful_one_ways = filter_successful_one_ways(arbitrage_trades, quot_mat)
+    successful_one_ways = [trade for trade in one_way_trades if trade.is_successful()]
     print("Successful arbitrage trades:")
     print(trade_list_to_str(successful_one_ways))
 

@@ -5,6 +5,17 @@ import sys
 from fx_trades import exchange_rate, CurrencyTrade, trade_list_to_str
 
 
+class TriangularTrade(CurrencyTrade):
+    def __init__(self, starting_currency: str, intermediate_currency: str, end_currency: str, arbitrage_rate: float):
+        super().__init__(starting_currency, intermediate_currency, end_currency, arbitrage_rate)
+    def is_successful(self):
+        return self.arbitrage_rate > 1
+
+    def __str__(self):
+        return f"{self.starting_currency}->{self.intermediate_currency}->{self.end_currency}->{self.starting_currency} " \
+               f": {self.arbitrage_rate:.4f}"
+
+
 def triangular_trade(starting_currency: str, intermediate_currency: str, end_currency: str,
                      quot_matrix: pd.DataFrame) -> float:
     """
@@ -50,7 +61,7 @@ def check_all_triangular(starting_currency: str, quot_matrix: pd.DataFrame) -> l
                                                    end_currency,
                                                    quot_matrix)
 
-                res = CurrencyTrade(starting_currency=starting_currency,
+                res = TriangularTrade(starting_currency=starting_currency,
                                     intermediate_currency=intermediate_currency,
                                     end_currency=end_currency,
                                     arbitrage_rate=triangular_rate)
@@ -58,18 +69,6 @@ def check_all_triangular(starting_currency: str, quot_matrix: pd.DataFrame) -> l
                 trades.append(res)
 
     return trades
-
-
-def filter_successful_triangular(currency_trades: list[CurrencyTrade]) -> list[CurrencyTrade]:
-    """
-    Filter the list of currency trades to find successful arbitrages.
-
-    :param currency_trades: A list of CurrencyTrade instances.
-    :type currency_trades: list[CurrencyTrade]
-    :return: A list of CurrencyTrade instances with an arbitrage rate greater than 1.
-    :rtype: list[CurrencyTrade]
-    """
-    return [trade for trade in currency_trades if trade.arbitrage_rate > 1]
 
 
 def main():
@@ -100,7 +99,7 @@ def main():
     print("All trades:")
     print(trade_list_to_str(triangular_trades))
 
-    successful_trades = filter_successful_triangular(triangular_trades)
+    successful_trades = [trade for trade in triangular_trades if trade.is_successful()]
     print("Arbitrage trades:")
     print(trade_list_to_str(successful_trades))
 

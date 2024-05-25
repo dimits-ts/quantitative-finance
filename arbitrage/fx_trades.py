@@ -1,7 +1,8 @@
 import pandas as pd
+import abc
 
 
-class CurrencyTrade:
+class CurrencyTrade(abc.ABC):
     """
     A record class to represent a currency trade.
 
@@ -33,9 +34,9 @@ class CurrencyTrade:
         self.end_currency = end_currency
         self.arbitrage_rate = arbitrage_rate
 
-    def __str__(self):
-        return f"{self.starting_currency}->{self.intermediate_currency}->{self.end_currency}: " \
-               f"Arbitrage rate: {self.arbitrage_rate:.4f}"
+    @abc.abstractmethod
+    def is_successful(self):
+        raise NotImplementedError("Explicit call to abstract method.")
 
 
 def exchange_rate(quot_matrix: pd.DataFrame, from_currency: str, to_currency: str) -> float:
@@ -51,7 +52,7 @@ def exchange_rate(quot_matrix: pd.DataFrame, from_currency: str, to_currency: st
     :return: The exchange rate from `from_currency` to `to_currency`.
     :rtype: float
     """
-    return quot_matrix.loc[from_currency, to_currency]
+    return quot_matrix.loc[to_currency, from_currency]
 
 
 def trade_list_to_str(trades: list[CurrencyTrade]) -> str:
