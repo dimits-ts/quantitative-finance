@@ -2,7 +2,7 @@ import pandas as pd
 import os
 import sys
 
-from fx_trades import exchange_rate, CurrencyTrade, filter_successful_arbitrages
+from fx_trades import exchange_rate, CurrencyTrade, trade_list_to_str
 
 
 def triangular_trade(starting_currency: str, intermediate_currency: str, end_currency: str,
@@ -60,6 +60,18 @@ def check_all_triangular(starting_currency: str, quot_matrix: pd.DataFrame) -> l
     return trades
 
 
+def filter_successful_triangular(currency_trades: list[CurrencyTrade]) -> list[CurrencyTrade]:
+    """
+    Filter the list of currency trades to find successful arbitrages.
+
+    :param currency_trades: A list of CurrencyTrade instances.
+    :type currency_trades: list[CurrencyTrade]
+    :return: A list of CurrencyTrade instances with an arbitrage rate greater than 1.
+    :rtype: list[CurrencyTrade]
+    """
+    return [trade for trade in currency_trades if trade.arbitrage_rate > 1]
+
+
 def main():
     if len(sys.argv) != 3:
         print("Usage: python script.py <data_path> <starting_currency>")
@@ -85,9 +97,12 @@ def main():
         sys.exit(1)
 
     triangular_trades = check_all_triangular(starting_currency, quot_mat)
-    successful_trades = filter_successful_arbitrages(triangular_trades)
+    print("All trades:")
+    print(trade_list_to_str(triangular_trades))
+
+    successful_trades = filter_successful_triangular(triangular_trades)
     print("Arbitrage trades:")
-    print("\n".join([str(trade) for trade in successful_trades]))
+    print(trade_list_to_str(successful_trades))
 
 
 if __name__ == "__main__":

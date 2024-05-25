@@ -54,13 +54,10 @@ def exchange_rate(quot_matrix: pd.DataFrame, from_currency: str, to_currency: st
     return quot_matrix.loc[from_currency, to_currency]
 
 
-def filter_successful_arbitrages(currency_trades: list[CurrencyTrade]) -> list[CurrencyTrade]:
+def trade_list_to_str(trades: list[CurrencyTrade]) -> str:
     """
-    Filter the list of currency trades to find successful arbitrages.
-
-    :param currency_trades: A list of CurrencyTrade instances.
-    :type currency_trades: list[CurrencyTrade]
-    :return: A list of CurrencyTrade instances with an arbitrage rate greater than 1.
-    :rtype: list[CurrencyTrade]
+    Returns a formatted string detailing a list of trades.
+    :param trades: a list of currency trades
+    :return: a string representation of the currency trades
     """
-    return [trade for trade in currency_trades if trade.arbitrage_rate > 1]
+    return "\n".join([str(trade) for trade in trades])
