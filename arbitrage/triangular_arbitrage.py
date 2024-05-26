@@ -6,10 +6,18 @@ from fx_trades import exchange_rate, CurrencyTrade, trade_list_to_str
 
 
 class TriangularTrade(CurrencyTrade):
+    """
+    A class implementing the CurrencyTrade abstract class, which describes a triangular arbitrage trade.
+    """
     def __init__(self, starting_currency: str, intermediate_currency: str, end_currency: str, arbitrage_rate: float):
         super().__init__(starting_currency, intermediate_currency, end_currency, arbitrage_rate)
 
     def is_successful(self):
+        """
+        Checks whether the arbitrage would be successful by checking whether its rate is larger than 1
+        (since 1 currency unit is always equal to itself in spot time).
+        :return: true if arbitrage is possible
+        """
         return self.arbitrage_rate > 1
 
     def __str__(self):
@@ -63,9 +71,9 @@ def check_all_triangular(starting_currency: str, quot_matrix: pd.DataFrame) -> l
                                                    quot_matrix)
 
                 res = TriangularTrade(starting_currency=starting_currency,
-                                    intermediate_currency=intermediate_currency,
-                                    end_currency=end_currency,
-                                    arbitrage_rate=triangular_rate)
+                                      intermediate_currency=intermediate_currency,
+                                      end_currency=end_currency,
+                                      arbitrage_rate=triangular_rate)
 
                 trades.append(res)
 

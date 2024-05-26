@@ -6,6 +6,9 @@ from fx_trades import exchange_rate, CurrencyTrade, trade_list_to_str
 
 
 class OnewayTrade(CurrencyTrade):
+    """
+    A class implementing the CurrencyTrade abstract class, which describes a one-way arbitrage trade.
+    """
     def __init__(self, starting_currency: str,
                  intermediate_currency: str,
                  end_currency: str,
@@ -15,6 +18,10 @@ class OnewayTrade(CurrencyTrade):
         super().__init__(starting_currency, intermediate_currency, end_currency, arbitrage_rate)
 
     def is_successful(self):
+        """
+        Checks whether the arbitrage would be successful by comparing its rate to the standard, direct exchange rate.
+        :return: true if arbitrage is possible
+        """
         return self.arbitrage_rate > exchange_rate(self.quot_matrix,
                                                    from_currency=self.starting_currency,
                                                    to_currency=self.end_currency)
