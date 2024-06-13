@@ -5,11 +5,41 @@ from math import exp, sqrt
 
 
 class OptionType(enum.Enum):
+    """
+    Enumeration for the type of options.
+
+    :ivar CALL: Represents a call option.
+    :ivar PUT: Represents a put option.
+    """
     CALL = enum.auto()
     PUT = enum.auto()
 
 
 class Option(abc.ABC):
+    """
+    Abstract base class for financial options.
+
+    :param option_type: The type of the option (CALL or PUT).
+    :type option_type: OptionType
+
+    :param current_stock_price: The current price of the underlying stock.
+    :type current_stock_price: float
+
+    :param strike_price: The strike price of the option.
+    :type strike_price: float
+
+    :param interest: The risk-free interest rate from now until end-of-maturity.
+    :type interest: float
+
+    :param volatility: The volatility of the underlying stock.
+    :type volatility: float
+
+    :param dividend_yield: The dividend yield of the underlying stock.
+    :type dividend_yield: float
+
+    :param steps: The number of steps in the binomial tree model.
+    :type steps: int
+    """
 
     def __init__(self,
                  option_type: OptionType,
@@ -29,9 +59,24 @@ class Option(abc.ABC):
 
     @abc.abstractmethod
     def price(self) -> float:
+        """
+        Calculate the price of the option.
+
+        :return: The price of the option.
+        :rtype: float
+        """
         return 0
 
     def _payoff(self, stock_price: float) -> float:
+        """
+        Calculate the payoff of the option at a given stock price.
+
+        :param stock_price: The price of the underlying stock.
+        :type stock_price: float
+
+        :return: The payoff of the option.
+        :rtype: float
+        """
         if self.option_type == OptionType.CALL:
             return max(0., stock_price - self.strike_price)
         elif self.option_type == OptionType.PUT:
@@ -39,6 +84,30 @@ class Option(abc.ABC):
 
 
 class AmericanOption(Option):
+    """
+    Class for American options.
+
+    :param option_type: The type of the option (CALL or PUT).
+    :type option_type: OptionType
+
+    :param current_stock_price: The current price of the underlying stock.
+    :type current_stock_price: float
+
+    :param strike_price: The strike price of the option.
+    :type strike_price: float
+
+    :param interest: The risk-free interest rate from now until end-of-maturity.
+    :type interest: float
+
+    :param volatility: The volatility of the underlying stock.
+    :type volatility: float
+
+    :param dividend_yield: The dividend yield of the underlying stock.
+    :type dividend_yield: float
+
+    :param steps: The number of steps in the binomial tree model.
+    :type steps: int
+    """
 
     def __init__(self, option_type: OptionType,
                  current_stock_price: float,
@@ -57,11 +126,23 @@ class AmericanOption(Option):
         self.cached_payoff_tree = None
 
     def price(self) -> float:
+        """
+        Calculate the price of the American option.
+
+        :return: The price of the American option.
+        :rtype: float
+        """
         price_tree = self.forward()
         payoff_tree = self.backward(price_tree)
         return payoff_tree[0][0]
 
     def delta(self) -> float:
+        """
+        Calculate the delta of the American option.
+
+        :return: The delta of the American option.
+        :rtype: float
+        """
         price_tree = self.forward()
         payoff_tree = self.backward(price_tree)
         delta_u = self._stock_delta(payoff_up=payoff_tree[2][0], payoff_down=payoff_tree[2][1])
@@ -69,6 +150,15 @@ class AmericanOption(Option):
         return (delta_u - delta_d) / (price_tree[1][0] - price_tree[1][1])
 
     def vega(self, delta_sigma: float = 0.01) -> float:
+        """
+        Calculate the vega of the American option.
+
+        :param delta_sigma: The change in volatility for vega calculation, defaults to 1%.
+        :type delta_sigma: float, optional
+
+        :return: The vega of the American option.
+        :rtype: float
+        """
         original_price = self.price()
 
         sim_option = AmericanOption(self.option_type,
@@ -83,6 +173,12 @@ class AmericanOption(Option):
         return (sim_price - original_price) / delta_sigma
 
     def forward(self) -> list[list[float]]:
+        """
+        Build the binomial tree for stock prices.
+
+        :return: A binomial tree representing future stock prices.
+        :rtype: list[list[float]]
+        """
         if self.cached_price_tree is not None:
             return self.cached_price_tree
 
@@ -91,9 +187,9 @@ class AmericanOption(Option):
         for i in range(self.steps - 1):
             tree.append([])
             for previous_node in tree[i]:
-                u = self.compound() * self.uncertainty()
-                d = self.compound() / self.uncertainty()
-                future_value = previous_node * self.compound()
+                u = self._compound() * self._uncertainty()
+                d = self._compound() / self._uncertainty()
+                future_value = previous_node * self._compound()
 
                 tree[i + 1].append(u * future_value)
                 tree[i + 1].append(d * future_value)
@@ -102,6 +198,15 @@ class AmericanOption(Option):
         return tree
 
     def backward(self, price_tree: list[list[float]]) -> list[list[float]]:
+        """
+        Calculate the option payoff tree, according to the price binomial tree.
+
+        :param price_tree: The binomial tree of stock prices.
+        :type price_tree: list[list[float]]
+
+        :return: A binomial tree representing option payoffs.
+        :rtype: list[list[float]]
+        """
         if self.cached_payoff_tree is not None:
             return self.cached_payoff_tree
 
@@ -110,7 +215,7 @@ class AmericanOption(Option):
 
         # instantiate last level of payoffs (at time S_T)
         for j in range(len(price_tree[-1])):
-            payoff_tree[-1].append(self.exercise_payoff(price_tree[-1][j]))
+            payoff_tree[-1].append(self._payoff(price_tree[-1][j]))
 
         # work backwards in the tree until the root
         # for each level of the tree starting from the level before the leaves
@@ -118,43 +223,105 @@ class AmericanOption(Option):
         for i in range(self.steps - 2, -1, -1):
             # for each node in the level
             for j in range(len(price_tree[i])):
-                payoff = self.american_payoff(stock_price=price_tree[i][j],
-                                              up_state_price=payoff_tree[i + 1][2 * j],
-                                              down_state_price=payoff_tree[i + 1][2 * j + 1])
+                payoff = self._american_payoff(stock_price=price_tree[i][j],
+                                               up_state_price=payoff_tree[i + 1][2 * j],
+                                               down_state_price=payoff_tree[i + 1][2 * j + 1])
                 payoff_tree[i].append(payoff)
 
         self.cached_payoff_tree = payoff_tree
         return payoff_tree
 
-    def american_payoff(self, stock_price: float, up_state_price: float, down_state_price: float) -> float:
-        u = self.compound() * self.uncertainty()
-        d = self.compound() / self.uncertainty()
-        p = (self.compound() - d) / (u - d)
+    def _american_payoff(self, stock_price: float, up_state_price: float, down_state_price: float) -> float:
+        """
+        Calculate the payoff of the American option at a given node in the binomial tree.
+        This method is different from the protected _payoff() method, since it additionally checks whether
+         it's worth it to exercise the option at each node.
+
+        :param stock_price: The stock price at the current node.
+        :type stock_price: float
+
+        :param up_state_price: The option payoff in the up state.
+        :type up_state_price: float
+
+        :param down_state_price: The option payoff in the down state.
+        :type down_state_price: float
+
+        :return: The payoff of the American option at the current node.
+        :rtype: float
+        """
+        u = self._compound() * self._uncertainty()
+        d = self._compound() / self._uncertainty()
+        p = (self._compound() - d) / (u - d)
 
         hold_payoff = exp(-self.interest * (1 / self.steps)) * (p * up_state_price + (1 - p) * down_state_price)
         exercise_payoff = self._payoff(stock_price)
         return max(hold_payoff, exercise_payoff)
 
-    def exercise_payoff(self, stock_price: float) -> float:
-        if self.option_type == OptionType.CALL:
-            return max(0., stock_price - self.strike_price)
-        elif self.option_type == OptionType.PUT:
-            return max(0., self.strike_price - stock_price)
+    def _compound(self) -> float:
+        """
+        Calculate the compound factor for the binomial tree.
 
-    def compound(self):
+        :return: The compound factor.
+        :rtype: float
+        """
         return exp((self.interest - self.dividend_yield) * (1 / self.steps))
 
-    def uncertainty(self):
+    def _uncertainty(self) -> float:
+        """
+        Calculate the uncertainty factor for the binomial tree.
+
+        :return: The uncertainty factor.
+        :rtype: float
+        """
         return exp(self.volatility * sqrt((1 / self.steps)))
 
     def _stock_delta(self, payoff_up: float, payoff_down: float) -> float:
-        u = self.compound() * self.uncertainty()
-        d = self.compound() / self.uncertainty()
+        """
+        Calculate the stock delta for the binomial tree.
+
+        :param payoff_up: The payoff in the up state.
+        :type payoff_up: float
+
+        :param payoff_down: The payoff in the down state.
+        :type payoff_down: float
+
+        :return: The stock delta.
+        :rtype: float
+        """
+        u = self._compound() * self._uncertainty()
+        d = self._compound() / self._uncertainty()
         return exp(-self.dividend_yield / self.steps) \
             * ((payoff_up - payoff_down) / (self.current_stock_price * (u - d)))
 
 
 class EuropeanOption(Option):
+    """
+    Class for European options.
+
+    :param option_type: The type of the option (CALL or PUT).
+    :type option_type: OptionType
+
+    :param current_stock_price: The current price of the underlying stock.
+    :type current_stock_price: float
+
+    :param strike_price: The strike price of the option.
+    :type strike_price: float
+
+    :param interest: The risk-free interest rate from now until end-of-maturity.
+    :type interest: float
+
+    :param volatility: The volatility of the underlying stock.
+    :type volatility: float
+
+    :param dividend_yield: The dividend yield of the underlying stock.
+    :type dividend_yield: float
+
+    :param steps: The number of random scenarios in the Monte Carlo simulation.
+    :type steps: int
+
+    :param time_period: The time period for the option, defaults to 0.5.
+    :type time_period: float, optional
+    """
 
     def __init__(self, option_type: OptionType,
                  current_stock_price: float,
@@ -168,8 +335,12 @@ class EuropeanOption(Option):
         self.time_period = time_period
 
     def price(self) -> float:
-        # this would be miles better in terms of performance with numpy,
-        # but I'm keeping dependencies to 0 in this project
+        """
+        Calculate the price of the European option using a Monte Carlo simulation.
+
+        :return: The price of the European option.
+        :rtype: float
+        """
         sum_payoffs = 0
 
         for i in range(self.steps):
@@ -181,8 +352,26 @@ class EuropeanOption(Option):
         return sum_payoffs / self.steps
 
     def _calculate_stock_price(self, epsilon: float) -> float:
+        """
+        Calculate the stock price for the European option using a random variable.
+
+        :param epsilon: A random number sampled from a normal distribution with mean 0 and standard deviation 1.
+        :type epsilon: float
+
+        :return: The calculated stock price.
+        :rtype: float
+        """
         return exp((self.interest - self.dividend_yield - 1 / 2 * self.volatility ** 2) * self.time_period +
                    epsilon * self.volatility * sqrt(self.time_period)) * self.current_stock_price
 
     def _discount(self, asset_price: float) -> float:
+        """
+        Discount the asset price to the present value.
+
+        :param asset_price: The price of the asset.
+        :type asset_price: float
+
+        :return: The discounted asset price.
+        :rtype: float
+        """
         return exp(-self.interest * self.time_period) * asset_price
