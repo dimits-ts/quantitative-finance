@@ -46,6 +46,8 @@ class AmericanOption(Option):
                          interest, volatility,
                          dividend_yield,
                          steps)
+        self.cached_price_tree = None
+        self.cached_payoff_tree = None
 
     def price(self) -> float:
         price_tree = self.forward()
@@ -66,6 +68,9 @@ class AmericanOption(Option):
             * ((payoff_up - payoff_down) / (self.current_stock_price * (u - d)))
 
     def forward(self) -> list[list[float]]:
+        if self.cached_price_tree is not None:
+            return self.cached_price_tree
+
         tree = [[self.current_stock_price]]
 
         for i in range(self.steps - 1):
@@ -78,9 +83,13 @@ class AmericanOption(Option):
                 tree[i + 1].append(u * future_value)
                 tree[i + 1].append(d * future_value)
 
+        self.cached_price_tree = tree
         return tree
 
     def backward(self, price_tree: list[list[float]]) -> list[list[float]]:
+        if self.cached_payoff_tree is not None:
+            return self.cached_payoff_tree
+
         # instantiate tree with same number of levels as price_tree
         payoff_tree = [[] for i in range(len(price_tree))]
 
@@ -99,6 +108,7 @@ class AmericanOption(Option):
                                      down_state_price=payoff_tree[i + 1][2 * j + 1])
                 payoff_tree[i].append(payoff)
 
+        self.cached_payoff_tree = payoff_tree
         return payoff_tree
 
     def payoff(self, stock_price: float, up_state_price: float, down_state_price: float) -> float:
