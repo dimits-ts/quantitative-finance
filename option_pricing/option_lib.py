@@ -1,5 +1,6 @@
 import enum
 import abc
+import random
 from math import exp, sqrt
 
 
@@ -29,6 +30,12 @@ class Option(abc.ABC):
     @abc.abstractmethod
     def price(self) -> float:
         return 0
+
+    def _payoff(self, stock_price: float) -> float:
+        if self.option_type == OptionType.CALL:
+            return max(0., stock_price - self.strike_price)
+        elif self.option_type == OptionType.PUT:
+            return max(0., self.strike_price - stock_price)
 
 
 class AmericanOption(Option):
@@ -68,19 +75,12 @@ class AmericanOption(Option):
                                     self.current_stock_price,
                                     self.strike_price,
                                     self.interest,
-                                    self.volatility * (1+delta_sigma),
+                                    self.volatility * (1 + delta_sigma),
                                     self.dividend_yield,
                                     self.steps)
         sim_price = sim_option.price()
 
         return (sim_price - original_price) / delta_sigma
-
-
-    def _stock_delta(self, payoff_up: float, payoff_down: float) -> float:
-        u = self.compound() * self.uncertainty()
-        d = self.compound() / self.uncertainty()
-        return exp(-self.dividend_yield / self.steps) \
-            * ((payoff_up - payoff_down) / (self.current_stock_price * (u - d)))
 
     def forward(self) -> list[list[float]]:
         if self.cached_price_tree is not None:
@@ -118,21 +118,21 @@ class AmericanOption(Option):
         for i in range(self.steps - 2, -1, -1):
             # for each node in the level
             for j in range(len(price_tree[i])):
-                payoff = self.payoff(stock_price=price_tree[i][j],
-                                     up_state_price=payoff_tree[i + 1][2 * j],
-                                     down_state_price=payoff_tree[i + 1][2 * j + 1])
+                payoff = self.american_payoff(stock_price=price_tree[i][j],
+                                              up_state_price=payoff_tree[i + 1][2 * j],
+                                              down_state_price=payoff_tree[i + 1][2 * j + 1])
                 payoff_tree[i].append(payoff)
 
         self.cached_payoff_tree = payoff_tree
         return payoff_tree
 
-    def payoff(self, stock_price: float, up_state_price: float, down_state_price: float) -> float:
+    def american_payoff(self, stock_price: float, up_state_price: float, down_state_price: float) -> float:
         u = self.compound() * self.uncertainty()
         d = self.compound() / self.uncertainty()
         p = (self.compound() - d) / (u - d)
 
         hold_payoff = exp(-self.interest * (1 / self.steps)) * (p * up_state_price + (1 - p) * down_state_price)
-        exercise_payoff = self.exercise_payoff(stock_price)
+        exercise_payoff = self._payoff(stock_price)
         return max(hold_payoff, exercise_payoff)
 
     def exercise_payoff(self, stock_price: float) -> float:
@@ -146,3 +146,43 @@ class AmericanOption(Option):
 
     def uncertainty(self):
         return exp(self.volatility * sqrt((1 / self.steps)))
+
+    def _stock_delta(self, payoff_up: float, payoff_down: float) -> float:
+        u = self.compound() * self.uncertainty()
+        d = self.compound() / self.uncertainty()
+        return exp(-self.dividend_yield / self.steps) \
+            * ((payoff_up - payoff_down) / (self.current_stock_price * (u - d)))
+
+
+class EuropeanOption(Option):
+
+    def __init__(self, option_type: OptionType,
+                 current_stock_price: float,
+                 strike_price: float,
+                 interest: float,
+                 volatility: float,
+                 dividend_yield: float,
+                 steps: int,
+                 time_period: float = 0.5):
+        super().__init__(option_type, current_stock_price, strike_price, interest, volatility, dividend_yield, steps)
+        self.time_period = time_period
+
+    def price(self) -> float:
+        # this would be miles better in terms of performance with numpy,
+        # but I'm keeping dependencies to 0 in this project
+        sum_payoffs = 0
+
+        for i in range(self.steps):
+            rand_price = self._calculate_stock_price(random.gauss(mu=0, sigma=1))
+            discounted_price = self._discount(rand_price)
+            payoff = self._payoff(discounted_price)
+            sum_payoffs += payoff
+
+        return sum_payoffs / self.steps
+
+    def _calculate_stock_price(self, epsilon: float) -> float:
+        return exp((self.interest - self.dividend_yield - 1 / 2 * self.volatility ** 2) * self.time_period +
+                   epsilon * self.volatility * sqrt(self.time_period)) * self.current_stock_price
+
+    def _discount(self, asset_price: float) -> float:
+        return exp(-self.interest * self.time_period) * asset_price
