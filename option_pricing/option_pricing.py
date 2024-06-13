@@ -26,8 +26,12 @@ def main():
                                              volatility=VOLATILITY,
                                              dividend_yield=DIVIDEND_YIELD,
                                              steps=STEPS)
-    print("American Call price: ", american_call.price(), " Delta: ", american_call.delta())
-    print("American Put price: ", american_put.price(), " Delta: ", american_put.delta())
+    print("American Call Price: ", american_call.price(),
+          " Delta: ", american_call.delta(),
+          " Vega:", american_call.vega())
+    print("American Put Price: ", american_put.price(),
+          " Delta: ", american_put.delta(),
+          " Vega:", american_put.vega())
 
 
 if __name__ == "__main__":

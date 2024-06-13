@@ -61,6 +61,21 @@ class AmericanOption(Option):
         delta_d = self._stock_delta(payoff_up=payoff_tree[2][2], payoff_down=payoff_tree[2][3])
         return (delta_u - delta_d) / (price_tree[1][0] - price_tree[1][1])
 
+    def vega(self, delta_sigma: float = 0.01) -> float:
+        original_price = self.price()
+
+        sim_option = AmericanOption(self.option_type,
+                                    self.current_stock_price,
+                                    self.strike_price,
+                                    self.interest,
+                                    self.volatility * (1+delta_sigma),
+                                    self.dividend_yield,
+                                    self.steps)
+        sim_price = sim_option.price()
+
+        return (sim_price - original_price) / delta_sigma
+
+
     def _stock_delta(self, payoff_up: float, payoff_down: float) -> float:
         u = self.compound() * self.uncertainty()
         d = self.compound() / self.uncertainty()
