@@ -27,7 +27,7 @@ class Option(abc.ABC):
         self.option_type = option_type
 
     @abc.abstractmethod
-    def calculate_price(self) -> float:
+    def price(self) -> float:
         return 0
 
 
@@ -47,12 +47,25 @@ class AmericanOption(Option):
                          dividend_yield,
                          steps)
 
-    def calculate_price(self) -> float:
+    def price(self) -> float:
         price_tree = self.forward()
         payoff_tree = self.backward(price_tree)
         return payoff_tree[0][0]
 
-    def forward(self):
+    def delta(self) -> float:
+        price_tree = self.forward()
+        payoff_tree = self.backward(price_tree)
+        delta_u = self._stock_delta(payoff_up=payoff_tree[2][0], payoff_down=payoff_tree[2][1])
+        delta_d = self._stock_delta(payoff_up=payoff_tree[2][2], payoff_down=payoff_tree[2][3])
+        return (delta_u - delta_d) / (price_tree[1][0] - price_tree[1][1])
+
+    def _stock_delta(self, payoff_up: float, payoff_down: float) -> float:
+        u = self.compound() * self.uncertainty()
+        d = self.compound() / self.uncertainty()
+        return exp(-self.dividend_yield / self.steps) \
+            * ((payoff_up - payoff_down) / (self.current_stock_price * (u - d)))
+
+    def forward(self) -> list[list[float]]:
         tree = [[self.current_stock_price]]
 
         for i in range(self.steps - 1):

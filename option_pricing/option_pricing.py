@@ -5,7 +5,7 @@ VOLATILITY = 0.35
 INTEREST = 0.0298
 DIVIDEND_YIELD = 0.015
 EXPIRY_MONTHS = 6
-STEPS = 100
+STEPS = 10
 
 
 def main():
@@ -26,8 +26,8 @@ def main():
                                              volatility=VOLATILITY,
                                              dividend_yield=DIVIDEND_YIELD,
                                              steps=STEPS)
-    print("American Call price: ", american_call.calculate_price())
-    print("American Put price: ", american_put.calculate_price())
+    print("American Call price: ", american_call.price(), " Delta: ", american_call.delta())
+    print("American Put price: ", american_put.price(), " Delta: ", american_put.delta())
 
 
 if __name__ == "__main__":
