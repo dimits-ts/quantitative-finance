@@ -132,8 +132,8 @@ class AmericanOption(Option):
         :return: The price of the American option.
         :rtype: float
         """
-        price_tree = self.forward()
-        payoff_tree = self.backward(price_tree)
+        stock_price_tree = self.forward()
+        payoff_tree = self.backward(stock_price_tree)
         return payoff_tree[0][0]
 
     def delta(self) -> float:
@@ -143,11 +143,13 @@ class AmericanOption(Option):
         :return: The delta of the American option.
         :rtype: float
         """
-        price_tree = self.forward()
-        payoff_tree = self.backward(price_tree)
-        delta_u = self._stock_delta(payoff_up=payoff_tree[2][0], payoff_down=payoff_tree[2][1])
-        delta_d = self._stock_delta(payoff_up=payoff_tree[2][2], payoff_down=payoff_tree[2][3])
-        return (delta_u - delta_d) / (price_tree[1][0] - price_tree[1][1])
+        stock_price_tree = self.forward()
+        payoff_tree = self.backward(stock_price_tree)
+        c_u = payoff_tree[1][0]
+        c_d = payoff_tree[1][1]
+        s_u = self.current_stock_price * self._compound() * self._uncertainty()
+        s_d = self.current_stock_price * self._compound() / self._uncertainty()
+        return (c_u - c_d) / (s_u - s_d)
 
     def vega(self, delta_sigma: float = 0.01) -> float:
         """
@@ -187,19 +189,18 @@ class AmericanOption(Option):
         for i in range(self.steps - 1):
             tree.append([])
             for previous_node in tree[i]:
-                u = self._compound() * self._uncertainty()
-                d = self._compound() / self._uncertainty()
-                future_value = previous_node * self._compound()
+                s_u = previous_node * self._compound() * self._uncertainty()
+                s_d = previous_node * self._compound() / self._uncertainty()
 
-                tree[i + 1].append(u * future_value)
-                tree[i + 1].append(d * future_value)
+                tree[i + 1].append(s_u)
+                tree[i + 1].append(s_d)
 
         self.cached_price_tree = tree
         return tree
 
     def backward(self, price_tree: list[list[float]]) -> list[list[float]]:
         """
-        Calculate the option payoff tree, according to the price binomial tree.
+        Calculate the option price tree, according to the stock price binomial tree.
 
         :param price_tree: The binomial tree of stock prices.
         :type price_tree: list[list[float]]
@@ -274,24 +275,6 @@ class AmericanOption(Option):
         :rtype: float
         """
         return exp(self.volatility * sqrt((1 / self.steps)))
-
-    def _stock_delta(self, payoff_up: float, payoff_down: float) -> float:
-        """
-        Calculate the stock delta for the binomial tree.
-
-        :param payoff_up: The payoff in the up state.
-        :type payoff_up: float
-
-        :param payoff_down: The payoff in the down state.
-        :type payoff_down: float
-
-        :return: The stock delta.
-        :rtype: float
-        """
-        u = self._compound() * self._uncertainty()
-        d = self._compound() / self._uncertainty()
-        return exp(-self.dividend_yield / self.steps) \
-            * ((payoff_up - payoff_down) / (self.current_stock_price * (u - d)))
 
 
 class EuropeanOption(Option):
