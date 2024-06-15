@@ -3,9 +3,10 @@ import random
 
 CURRENT_STOCK_PRICE = 20
 VOLATILITY = 0.35
+# bi-annual interest instead of given annual interest
 INTEREST = 0.0298
 DIVIDEND_YIELD = 0.015
-EXPIRY_MONTHS = 6
+EXPIRY_YEARS = 0.5
 AMERICAN_STEPS = 10
 EUROPEAN_STEPS = 10000
 SEED = 42
@@ -46,7 +47,8 @@ def main():
                                               interest=INTEREST,
                                               volatility=VOLATILITY,
                                               dividend_yield=DIVIDEND_YIELD,
-                                              steps=EUROPEAN_STEPS)
+                                              steps=EUROPEAN_STEPS,
+                                              time_period=EXPIRY_YEARS)
     print("European Call Price: ", european_call.price())
 
     european_put = option_lib.EuropeanOption(option_lib.OptionType.PUT,
@@ -55,7 +57,8 @@ def main():
                                              interest=INTEREST,
                                              volatility=VOLATILITY,
                                              dividend_yield=DIVIDEND_YIELD,
-                                             steps=EUROPEAN_STEPS)
+                                             steps=EUROPEAN_STEPS,
+                                              time_period=EXPIRY_YEARS)
     print("European Put Price: ", european_put.price())
 
 

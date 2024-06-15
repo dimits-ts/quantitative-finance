@@ -302,7 +302,7 @@ class EuropeanOption(Option):
     :param steps: The number of random scenarios in the Monte Carlo simulation.
     :type steps: int
 
-    :param time_period: The time period for the option, defaults to 0.5.
+    :param time_period: Years to option maturity
     :type time_period: float, optional
     """
 
@@ -313,7 +313,7 @@ class EuropeanOption(Option):
                  volatility: float,
                  dividend_yield: float,
                  steps: int,
-                 time_period: float = 0.5):
+                 time_period: float):
         super().__init__(option_type, current_stock_price, strike_price, interest, volatility, dividend_yield, steps)
         self.time_period = time_period
 
