@@ -39,6 +39,9 @@ class Option(abc.ABC):
 
     :param steps: The number of steps in the binomial tree model.
     :type steps: int
+
+    :param expiry_years: Years to option maturity
+    :type expiry_years: float
     """
 
     def __init__(self,
@@ -48,7 +51,9 @@ class Option(abc.ABC):
                  interest: float,
                  volatility: float,
                  dividend_yield: float,
-                 steps: int):
+                 steps: int,
+                 expiry_years: float):
+        self.expiry_years = expiry_years
         self.strike_price = strike_price
         self.steps = steps
         self.dividend_yield = dividend_yield
@@ -85,28 +90,7 @@ class Option(abc.ABC):
 
 class AmericanOption(Option):
     """
-    Class for American options.
-
-    :param option_type: The type of the option (CALL or PUT).
-    :type option_type: OptionType
-
-    :param current_stock_price: The current price of the underlying stock.
-    :type current_stock_price: float
-
-    :param strike_price: The strike price of the option.
-    :type strike_price: float
-
-    :param interest: The risk-free interest rate from now until end-of-maturity.
-    :type interest: float
-
-    :param volatility: The volatility of the underlying stock.
-    :type volatility: float
-
-    :param dividend_yield: The dividend yield of the underlying stock.
-    :type dividend_yield: float
-
-    :param steps: The number of steps in the binomial tree model.
-    :type steps: int
+    Class for American options. Uses a binomial option pricing model.
     """
 
     def __init__(self, option_type: OptionType,
@@ -115,13 +99,15 @@ class AmericanOption(Option):
                  interest: float,
                  volatility: float,
                  dividend_yield: float,
-                 steps: int):
+                 steps: int,
+                 expiry_years: float):
         super().__init__(option_type,
                          current_stock_price,
                          strike_price,
                          interest, volatility,
                          dividend_yield,
-                         steps)
+                         steps,
+                         expiry_years)
         self.cached_price_tree = None
         self.cached_payoff_tree = None
 
@@ -169,7 +155,8 @@ class AmericanOption(Option):
                                     self.interest,
                                     self.volatility * (1 + delta_sigma),
                                     self.dividend_yield,
-                                    self.steps)
+                                    self.steps,
+                                    self.expiry_years)
         sim_price = sim_option.price()
 
         return (sim_price - original_price) / delta_sigma
@@ -265,7 +252,7 @@ class AmericanOption(Option):
         :return: The compound factor.
         :rtype: float
         """
-        return exp((self.interest - self.dividend_yield) * (1 / self.steps))
+        return exp((self.interest - self.dividend_yield) * self._h())
 
     def _uncertainty(self) -> float:
         """
@@ -274,36 +261,15 @@ class AmericanOption(Option):
         :return: The uncertainty factor.
         :rtype: float
         """
-        return exp(self.volatility * sqrt((1 / self.steps)))
+        return exp(self.volatility * sqrt(self._h()))
+
+    def _h(self):
+        return 1/(self.steps * self.expiry_years)
 
 
 class EuropeanOption(Option):
     """
-    Class for European options.
-
-    :param option_type: The type of the option (CALL or PUT).
-    :type option_type: OptionType
-
-    :param current_stock_price: The current price of the underlying stock.
-    :type current_stock_price: float
-
-    :param strike_price: The strike price of the option.
-    :type strike_price: float
-
-    :param interest: The risk-free interest rate from now until end-of-maturity.
-    :type interest: float
-
-    :param volatility: The volatility of the underlying stock.
-    :type volatility: float
-
-    :param dividend_yield: The dividend yield of the underlying stock.
-    :type dividend_yield: float
-
-    :param steps: The number of random scenarios in the Monte Carlo simulation.
-    :type steps: int
-
-    :param time_period: Years to option maturity
-    :type time_period: float, optional
+    Class for European options. Uses a Monte Carlo option pricing model.
     """
 
     def __init__(self, option_type: OptionType,
@@ -313,9 +279,15 @@ class EuropeanOption(Option):
                  volatility: float,
                  dividend_yield: float,
                  steps: int,
-                 time_period: float):
-        super().__init__(option_type, current_stock_price, strike_price, interest, volatility, dividend_yield, steps)
-        self.time_period = time_period
+                 expiry_years: float):
+        super().__init__(option_type,
+                         current_stock_price,
+                         strike_price,
+                         interest,
+                         volatility,
+                         dividend_yield,
+                         steps,
+                         expiry_years)
 
     def price(self) -> float:
         """
@@ -344,8 +316,8 @@ class EuropeanOption(Option):
         :return: The calculated stock price.
         :rtype: float
         """
-        return exp((self.interest - self.dividend_yield - 1 / 2 * self.volatility ** 2) * self.time_period +
-                   epsilon * self.volatility * sqrt(self.time_period)) * self.current_stock_price
+        return exp((self.interest - self.dividend_yield - 1 / 2 * self.volatility ** 2) * self.expiry_years +
+                   epsilon * self.volatility * sqrt(self.expiry_years)) * self.current_stock_price
 
     def _discount(self, asset_price: float) -> float:
         """
@@ -357,4 +329,4 @@ class EuropeanOption(Option):
         :return: The discounted asset price.
         :rtype: float
         """
-        return exp(-self.interest * self.time_period) * asset_price
+        return exp(-self.interest * self.expiry_years) * asset_price

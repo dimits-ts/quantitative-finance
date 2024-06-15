@@ -3,8 +3,7 @@ import random
 
 CURRENT_STOCK_PRICE = 20
 VOLATILITY = 0.35
-# bi-annual interest instead of given annual interest
-INTEREST = 0.0298
+INTEREST = 0.03
 DIVIDEND_YIELD = 0.015
 EXPIRY_YEARS = 0.5
 AMERICAN_STEPS = 15
@@ -15,7 +14,7 @@ SEED = 42
 def main():
     random.seed(SEED)
     # strike price = forward price
-    strike_price = CURRENT_STOCK_PRICE * (1 + INTEREST)
+    strike_price = CURRENT_STOCK_PRICE * (1 + 0.5 * INTEREST) ** 2
 
     american_call = option_lib.AmericanOption(option_lib.OptionType.CALL,
                                               current_stock_price=CURRENT_STOCK_PRICE,
@@ -23,7 +22,8 @@ def main():
                                               interest=INTEREST,
                                               volatility=VOLATILITY,
                                               dividend_yield=DIVIDEND_YIELD,
-                                              steps=AMERICAN_STEPS)
+                                              steps=AMERICAN_STEPS,
+                                              expiry_years=EXPIRY_YEARS)
     american_call_price = american_call.price()
     american_call_delta = american_call.delta()
     american_call_vega = american_call.vega()
@@ -36,7 +36,8 @@ def main():
                                              interest=INTEREST,
                                              volatility=VOLATILITY,
                                              dividend_yield=DIVIDEND_YIELD,
-                                             steps=AMERICAN_STEPS)
+                                             steps=AMERICAN_STEPS,
+                                             expiry_years=EXPIRY_YEARS)
 
     american_put_price = american_put.price()
     american_put_delta = american_put.delta()
@@ -51,7 +52,7 @@ def main():
                                               volatility=VOLATILITY,
                                               dividend_yield=DIVIDEND_YIELD,
                                               steps=EUROPEAN_STEPS,
-                                              time_period=EXPIRY_YEARS)
+                                              expiry_years=EXPIRY_YEARS)
     european_call_price = european_call.price()
     print("European Call Price: ", european_call_price)
 
@@ -62,7 +63,7 @@ def main():
                                              volatility=VOLATILITY,
                                              dividend_yield=DIVIDEND_YIELD,
                                              steps=EUROPEAN_STEPS,
-                                             time_period=EXPIRY_YEARS)
+                                             expiry_years=EXPIRY_YEARS)
     european_put_price = european_put.price()
     print("European Call Price: ", european_put_price)
 
