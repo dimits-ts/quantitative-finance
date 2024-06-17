@@ -3,7 +3,7 @@ import random
 
 CURRENT_STOCK_PRICE = 20
 VOLATILITY = 0.35
-INTEREST = 0.03
+YEARLY_INTEREST = 0.03
 DIVIDEND_YIELD = 0.015
 EXPIRY_YEARS = 0.5
 AMERICAN_STEPS = 15
@@ -13,13 +13,13 @@ SEED = 42
 
 def main():
     random.seed(SEED)
-    # strike price = forward price
-    strike_price = CURRENT_STOCK_PRICE * (1 + 0.5 * INTEREST) ** 2
+    # at-the-money: strike price = forward price
+    strike_price = CURRENT_STOCK_PRICE * (1 + 0.5 * YEARLY_INTEREST)
 
     american_call = option_lib.AmericanOption(option_lib.OptionType.CALL,
                                               current_stock_price=CURRENT_STOCK_PRICE,
                                               strike_price=strike_price,
-                                              interest=INTEREST,
+                                              interest=YEARLY_INTEREST,
                                               volatility=VOLATILITY,
                                               dividend_yield=DIVIDEND_YIELD,
                                               steps=AMERICAN_STEPS,
@@ -33,7 +33,7 @@ def main():
     american_put = option_lib.AmericanOption(option_lib.OptionType.PUT,
                                              current_stock_price=CURRENT_STOCK_PRICE,
                                              strike_price=strike_price,
-                                             interest=INTEREST,
+                                             interest=YEARLY_INTEREST,
                                              volatility=VOLATILITY,
                                              dividend_yield=DIVIDEND_YIELD,
                                              steps=AMERICAN_STEPS,
@@ -48,7 +48,7 @@ def main():
     european_call = option_lib.EuropeanOption(option_lib.OptionType.CALL,
                                               current_stock_price=CURRENT_STOCK_PRICE,
                                               strike_price=strike_price,
-                                              interest=INTEREST,
+                                              interest=YEARLY_INTEREST,
                                               volatility=VOLATILITY,
                                               dividend_yield=DIVIDEND_YIELD,
                                               steps=EUROPEAN_STEPS,
@@ -59,7 +59,7 @@ def main():
     european_put = option_lib.EuropeanOption(option_lib.OptionType.PUT,
                                              current_stock_price=CURRENT_STOCK_PRICE,
                                              strike_price=strike_price,
-                                             interest=INTEREST,
+                                             interest=YEARLY_INTEREST,
                                              volatility=VOLATILITY,
                                              dividend_yield=DIVIDEND_YIELD,
                                              steps=EUROPEAN_STEPS,
