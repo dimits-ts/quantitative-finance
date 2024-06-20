@@ -18,30 +18,6 @@ class OptionType(enum.Enum):
 class Option(abc.ABC):
     """
     Abstract base class for financial options.
-
-    :param option_type: The type of the option (CALL or PUT).
-    :type option_type: OptionType
-
-    :param current_stock_price: The current price of the underlying stock.
-    :type current_stock_price: float
-
-    :param strike_price: The strike price of the option.
-    :type strike_price: float
-
-    :param interest: The risk-free interest rate from now until end-of-maturity.
-    :type interest: float
-
-    :param volatility: The volatility of the underlying stock.
-    :type volatility: float
-
-    :param dividend_yield: The dividend yield of the underlying stock.
-    :type dividend_yield: float
-
-    :param steps: The number of steps in the binomial tree model.
-    :type steps: int
-
-    :param expiry_years: Years to option maturity
-    :type expiry_years: float
     """
 
     def __init__(self,
@@ -53,6 +29,34 @@ class Option(abc.ABC):
                  dividend_yield: float,
                  steps: int,
                  expiry_years: float):
+        """
+        Construct a new Option pricing model.
+
+        :param option_type: The type of the option (CALL or PUT).
+        :type option_type: OptionType
+
+        :param current_stock_price: The current price of the underlying stock.
+        :type current_stock_price: float
+
+        :param strike_price: The strike price of the option.
+        :type strike_price: float
+
+        :param interest: The risk-free interest rate from now until end-of-maturity.
+        :type interest: float
+
+        :param volatility: The volatility of the underlying stock.
+        :type volatility: float
+
+        :param dividend_yield: The dividend yield of the underlying stock.
+        :type dividend_yield: float
+
+        :param steps: The number of steps in the binomial tree model.
+        :type steps: int
+
+        :param expiry_years: Years to option maturity
+        :type expiry_years: float
+        """
+
         self.expiry_years = expiry_years
         self.strike_price = strike_price
         self.steps = steps
@@ -211,22 +215,18 @@ class AmericanOption(Option):
         for i in range(self.steps - 2, -1, -1):
             # for each node in the level
             for j in range(len(price_tree[i])):
-                payoff = self._american_payoff(stock_price=price_tree[i][j],
-                                               up_state_price=payoff_tree[i + 1][2 * j],
-                                               down_state_price=payoff_tree[i + 1][2 * j + 1])
+                hold_payoff = self._hold_payoff(up_state_price=payoff_tree[i + 1][2 * j],
+                                                down_state_price=payoff_tree[i + 1][2 * j + 1])
+                exercise_payoff = self._payoff(price_tree[i][j])
+                payoff = max(exercise_payoff, hold_payoff)
                 payoff_tree[i].append(payoff)
 
         self.cached_payoff_tree = payoff_tree
         return payoff_tree
 
-    def _american_payoff(self, stock_price: float, up_state_price: float, down_state_price: float) -> float:
+    def _hold_payoff(self, up_state_price: float, down_state_price: float) -> float:
         """
-        Calculate the payoff of the American option at a given node in the binomial tree.
-        This method is different from the protected _payoff() method, since it additionally checks whether
-         it's worth it to exercise the option at each node.
-
-        :param stock_price: The stock price at the current node.
-        :type stock_price: float
+        Calculate the hold payoff of the American option at a given node in the binomial tree.
 
         :param up_state_price: The option payoff in the up state.
         :type up_state_price: float
@@ -242,8 +242,8 @@ class AmericanOption(Option):
         p = (self._compound() - d) / (u - d)
 
         hold_payoff = exp(-self.interest * (1 / self.steps)) * (p * up_state_price + (1 - p) * down_state_price)
-        exercise_payoff = self._payoff(stock_price)
-        return max(hold_payoff, exercise_payoff)
+
+        return hold_payoff
 
     def _compound(self) -> float:
         """
@@ -264,7 +264,7 @@ class AmericanOption(Option):
         return exp(self.volatility * sqrt(self._h()))
 
     def _h(self):
-        return 1/(self.steps * self.expiry_years)
+        return 1 / (self.steps * self.expiry_years)
 
 
 class EuropeanOption(Option):
