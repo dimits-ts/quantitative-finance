@@ -299,14 +299,14 @@ class EuropeanOption(Option):
         sum_payoffs = 0
 
         for i in range(self.steps):
-            rand_price = self._calculate_stock_price(random.gauss(mu=0, sigma=1))
+            rand_price = self._calculate_rand_price(random.gauss(mu=0, sigma=1))
             discounted_price = self._discount(rand_price)
             payoff = self._payoff(discounted_price)
             sum_payoffs += payoff
 
         return sum_payoffs / self.steps
 
-    def _calculate_stock_price(self, epsilon: float) -> float:
+    def _calculate_rand_price(self, epsilon: float) -> float:
         """
         Calculate the stock price for the European option using a random variable.
 
